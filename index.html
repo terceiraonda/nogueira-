@@ -77,6 +77,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .switch input:checked + .track::after{transform:translateX(18px);background:var(--ink)}
 .txt small{display:block;margin-top:2px;color:var(--muted);font-size:13px}
 .group{display:flex;flex-direction:column;gap:18px;padding:14px;border:1px solid var(--line);border-radius:14px}
+.cfg-box{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--void);color:var(--ink);font-family:var(--f-mono);font-size:13px;resize:vertical;overflow-wrap:anywhere}
+.save{padding:14px;border:0;border-radius:14px;background:var(--core);color:var(--void);font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.ver{margin:0;text-align:center;color:var(--muted);font-family:var(--f-mono);font-size:11px;letter-spacing:.12em}
 .row{display:flex;flex-wrap:wrap;gap:10px}
 .ghost{padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:15px;cursor:pointer}
 .ghost.danger{color:var(--warm)}
@@ -161,6 +164,21 @@ button,input,select,textarea{font:inherit;color:inherit}
       <button type="button" class="ghost" id="testVoice">Testar voz</button>
       <button type="button" class="ghost danger" id="clearChat">Apagar conversa</button>
     </div>
+    <div class="group">
+      <div class="field">
+        <label>Levar para outro aparelho</label>
+        <small>Cada aparelho guarda os próprios ajustes. Copie o link abaixo aqui, mande para você mesmo (WhatsApp, e-mail) e abra no outro aparelho. As chaves vão junto, então não mande para mais ninguém.</small>
+      </div>
+      <button type="button" class="ghost" id="copyCfg">Copiar link com meus ajustes</button>
+      <textarea id="cfgOut" class="cfg-box" rows="3" readonly hidden aria-label="Link com os ajustes"></textarea>
+      <div class="field">
+        <label for="cfgIn">Ou cole aqui o link ou código</label>
+        <textarea id="cfgIn" class="cfg-box" rows="2" spellcheck="false" placeholder="Cole o link copiado no outro aparelho"></textarea>
+      </div>
+      <button type="button" class="ghost" id="importCfg">Importar ajustes</button>
+    </div>
+    <button type="button" class="save" id="saveSettings">Salvar ajustes</button>
+    <p class="ver">Nogueira versão 4</p>
   </div>
 </div>
 
@@ -617,6 +635,55 @@ clearBtn.addEventListener('click',()=>{
   setTimeout(()=>{clearBtn.textContent='Apagar conversa';},1500);
 });
 addEventListener('pagehide',()=>{speaker.stop();stopListening();});
+
+/* ---------- salvar e levar ajustes entre aparelhos ---------- */
+const SYNC_KEYS=['apiKey','model','aiName','userName','greeting','rate','follow','tts','azureKey','azureRegion','azureVoice','elevenKey','elevenVoice','elevenModel'];
+function readForm(){
+  prefs.apiKey=fKey.value.trim();prefs.model=fModel.value;
+  prefs.aiName=fAi.value.trim()||DEFAULTS.aiName;prefs.userName=fUser.value.trim();prefs.greeting=fGreet.value.trim()||DEFAULTS.greeting;
+  prefs.rate=Number(fRate.value)||1;prefs.follow=fFollow.checked;prefs.voiceURI=fVoice.value||prefs.voiceURI;
+  prefs.tts=fTts.value;prefs.azureKey=fAzKey.value.trim();prefs.azureRegion=fAzReg.value.trim().toLowerCase().replace(/\s+/g,'');
+  prefs.azureVoice=fAzVoice.value;prefs.elevenKey=fElKey.value.trim();prefs.elevenVoice=fElVoice.value.trim();prefs.elevenModel=fElModel.value;
+}
+function encodeCfg(){
+  const o={};SYNC_KEYS.forEach(k=>{o[k]=prefs[k];});
+  return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodeCfg(s){
+  s=String(s||'').trim();
+  const m=s.match(/cfg=([A-Za-z0-9_-]+)/);if(m)s=m[1];
+  s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';
+  const o=JSON.parse(decodeURIComponent(escape(atob(s))));
+  if(!o||typeof o!=='object')throw new Error('cfg');
+  let n=0;SYNC_KEYS.forEach(k=>{if(k in o&&typeof o[k]===typeof DEFAULTS[k]){prefs[k]=o[k];n++;}});
+  if(!n)throw new Error('cfg');
+  savePrefs();cloudWarned=false;applyPrefs();
+}
+$('#saveSettings').addEventListener('click',()=>{
+  readForm();savePrefs();cloudWarned=false;applyPrefs();
+  const b=$('#saveSettings');b.textContent='Salvo';
+  setTimeout(()=>{b.textContent='Salvar ajustes';closeSheet();},700);
+});
+$('#copyCfg').addEventListener('click',async()=>{
+  readForm();savePrefs();
+  const link=location.origin+location.pathname+'#cfg='+encodeCfg();
+  const out=$('#cfgOut'),btn=$('#copyCfg');
+  out.value=link;out.hidden=false;
+  try{await navigator.clipboard.writeText(link);btn.textContent='Link copiado';}
+  catch(e){out.focus();out.select();btn.textContent='Selecionei o link, copie à mão';}
+  setTimeout(()=>{btn.textContent='Copiar link com meus ajustes';},2500);
+});
+$('#importCfg').addEventListener('click',()=>{
+  const btn=$('#importCfg');
+  try{decodeCfg($('#cfgIn').value);$('#cfgIn').value='';openSheet();btn.textContent='Ajustes importados';}
+  catch(e){btn.textContent='Esse código não serve, copie de novo';}
+  setTimeout(()=>{btn.textContent='Importar ajustes';},2500);
+});
+if(/^#cfg=/.test(location.hash)){
+  try{decodeCfg(location.hash);showNotice('Ajustes importados do outro aparelho. Pode ligar o Nogueira.');}
+  catch(e){showNotice('O link de ajustes veio quebrado. Copie de novo no outro aparelho.');}
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+}
 
 applyPrefs();renderLog();setState('off');
 })();
