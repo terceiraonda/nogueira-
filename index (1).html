@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#04070d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Nogueira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&family=Saira+Condensed:wght@600;700&display=swap">
+<style>
+:root{
+  --void:#04070d; --panel:#0a1120; --line:#1b2843; --ink:#d8e4f6; --muted:#7a8cab;
+  --core:#7fe6ff; --plasma:#4a7dff; --warm:#ffb36b; --danger:#ff7a6b; --scrim:rgba(2,4,9,.7);
+  --f-display:"Saira Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;background:var(--void)}
+body{height:100%;margin:0;background:var(--void);color:var(--ink);font:16px/1.5 var(--f-body);overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--core);outline-offset:2px}
+[hidden]{display:none!important}
+.app{height:100%;max-width:560px;margin:0 auto;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);display:flex;flex-direction:column}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 4px}
+.id{display:flex;flex-direction:column;gap:2px;min-width:0}
+.name{font-family:var(--f-display);font-weight:700;font-size:24px;line-height:1;letter-spacing:.16em;text-transform:uppercase}
+.state{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.state::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.app[data-state="standby"] .state::before{background:var(--plasma)}
+.app[data-state="listening"] .state::before{background:var(--warm);animation:blink 1s infinite}
+.app[data-state="thinking"] .state::before{background:var(--plasma);animation:blink .7s infinite}
+.app[data-state="speaking"] .state::before{background:var(--core)}
+.app[data-state="error"] .state::before{background:var(--danger)}
+@keyframes blink{50%{opacity:.25}}
+.icon-btn{width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
+.icon-btn svg{width:22px;height:22px}
+.notice{margin:6px 0 0;padding:8px 12px;border:1px solid var(--warm);border-radius:10px;color:var(--warm);font-size:13px;line-height:1.4}
+.orb-wrap{position:relative;flex:1 1 50%;min-height:150px;display:grid;place-items:center}
+#orb{display:block}
+.orb-hit{position:absolute;inset:0;margin:auto;width:58%;max-width:100%;max-height:100%;aspect-ratio:1;border:0;border-radius:50%;background:transparent;cursor:pointer}
+.caption{min-height:1.5em;margin:0;text-align:center;font-family:var(--f-mono);font-size:13px;letter-spacing:.04em;color:var(--warm);overflow-wrap:anywhere}
+.log{flex:1 1 36%;min-height:80px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-block:20px 8px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 32px);mask-image:linear-gradient(to bottom,transparent 0,#000 32px)}
+.msg{min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.msg.user{align-self:flex-end;max-width:85%;padding:7px 12px;border:1px solid var(--line);border-radius:14px 14px 4px 14px;color:var(--muted);font-size:14px;line-height:1.4}
+.msg.ai{font-size:16px;opacity:.55}
+.msg.ai.latest{font-size:18px;opacity:1}
+.msg .err{display:block;margin-top:6px;color:var(--warm);font-size:14px}
+.start{margin:8px 0;padding:16px;border:0;border-radius:16px;background:var(--core);color:var(--void);font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.dock{display:flex;align-items:flex-end;gap:10px;margin-top:8px;padding:6px 6px 6px 12px;border:1px solid var(--line);border-radius:24px;background:var(--panel)}
+.dock textarea{flex:1;min-width:0;max-height:110px;padding:9px 0;border:0;outline:none;resize:none;background:transparent;color:var(--ink);font-size:16px;line-height:1.4}
+.dock textarea::placeholder{color:var(--muted)}
+.dock button{flex:none;width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--line);color:var(--ink);cursor:pointer}
+.dock button svg{width:20px;height:20px}
+.hint{margin:0;padding-block:8px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:1.35}
+.sheet{position:fixed;inset:0;z-index:10;display:flex;align-items:flex-end;justify-content:center;background:var(--scrim)}
+.sheet-card{width:100%;max-width:560px;max-height:90%;overflow-y:auto;display:flex;flex-direction:column;gap:18px;padding:18px 16px calc(22px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:1px solid var(--line);border-radius:20px 20px 0 0}
+.sheet-head{display:flex;align-items:center;justify-content:space-between}
+.sheet-head h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:22px;letter-spacing:.1em;text-transform:uppercase}
+.text-btn{border:0;background:transparent;color:var(--core);font-size:15px;padding:8px 4px;cursor:pointer}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{display:flex;justify-content:space-between;gap:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.field small{color:var(--muted);font-size:13px}
+.field input[type="text"],.field input[type="password"],.field select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--void);color:var(--ink);font-size:16px}
+.field input[type="range"]{width:100%;accent-color:var(--core)}
+.switch{position:relative;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;cursor:pointer;font-size:15px;line-height:1.35}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.track{position:relative;width:42px;height:24px;margin-top:1px;border-radius:12px;background:var(--line)}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:transform .2s}
+.switch input:checked + .track{background:var(--plasma)}
+.switch input:checked + .track::after{transform:translateX(18px);background:var(--ink)}
+.txt small{display:block;margin-top:2px;color:var(--muted);font-size:13px}
+.group{display:flex;flex-direction:column;gap:18px;padding:14px;border:1px solid var(--line);border-radius:14px}
+.cfg-box{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--void);color:var(--ink);font-family:var(--f-mono);font-size:13px;resize:vertical;overflow-wrap:anywhere}
+.save{padding:14px;border:0;border-radius:14px;background:var(--core);color:var(--void);font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.ver{margin:0;text-align:center;color:var(--muted);font-family:var(--f-mono);font-size:11px;letter-spacing:.12em}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.ghost{padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:15px;cursor:pointer}
+.ghost.danger{color:var(--warm)}
+@media (prefers-reduced-motion: reduce){.state::before{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app" data-state="off">
+  <header class="bar">
+    <div class="id"><span class="name" id="aiName">Nogueira</span><span class="state" id="stateLabel">desligado</span></div>
+    <button type="button" class="icon-btn" id="openSettings" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+    </button>
+  </header>
+  <p class="notice" id="notice" role="status" hidden></p>
+  <div class="orb-wrap"><canvas id="orb" aria-hidden="true"></canvas><button type="button" class="orb-hit" id="orbHit" aria-label="Falar com o Nogueira"></button></div>
+  <p class="caption" id="caption" aria-live="polite"></p>
+  <section class="log" id="log" aria-live="polite" aria-label="Conversa"></section>
+  <button type="button" class="start" id="startBtn">Ligar o Nogueira</button>
+  <form class="dock" id="dock" autocomplete="off" hidden>
+    <textarea id="msg" rows="1" enterkeyhint="send" placeholder="Ou digite aqui" aria-label="Mensagem"></textarea>
+    <button type="submit" aria-label="Enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </form>
+  <p class="hint" id="hint">Diga "QAP Nogueira" para chamar. Toque na esfera para falar direto ou para interromper.</p>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-head"><h2 id="sheetTitle">Ajustes</h2><button type="button" class="text-btn" id="closeSheet">Fechar</button></div>
+    <div class="field">
+      <label for="setKey">Chave da API</label>
+      <input id="setKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-...">
+      <small>Fica guardada só neste celular. Crie em platform.claude.com, em API Keys.</small>
+    </div>
+    <div class="field">
+      <label for="setModel">Cérebro</label>
+      <select id="setModel">
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5 (rápido e barato)</option>
+        <option value="claude-sonnet-5-5">Sonnet 5.5 (mais esperto, custa o dobro)</option>
+      </select>
+    </div>
+    <div class="field"><label for="setAiName">Nome do assistente</label><input id="setAiName" type="text" maxlength="24"><small>A ativação é "QAP" + esse nome.</small></div>
+    <div class="field"><label for="setUserName">Como ele te chama</label><input id="setUserName" type="text" maxlength="32"></div>
+    <div class="field"><label for="setGreeting">Resposta ao ser chamado</label><input id="setGreeting" type="text" maxlength="60"></div>
+    <div class="field">
+      <label for="setTts">Motor de voz</label>
+      <select id="setTts">
+        <option value="device">Voz do celular (grátis)</option>
+        <option value="azure">Microsoft Azure (voz neural)</option>
+        <option value="eleven">ElevenLabs (a mais humana)</option>
+      </select>
+    </div>
+    <div class="group" id="grpAzure" hidden>
+      <div class="field"><label for="setAzureKey">Chave do Azure</label><input id="setAzureKey" type="password" autocomplete="off" spellcheck="false" placeholder="KEY 1 do recurso de Fala"></div>
+      <div class="field"><label for="setAzureRegion">Região do Azure</label><input id="setAzureRegion" type="text" autocomplete="off" spellcheck="false" placeholder="brazilsouth"><small>Do jeito que aparece em "Location/Region", sem espaço. Ex.: brazilsouth, eastus.</small></div>
+      <div class="field"><label for="setAzureVoice">Voz do Azure</label>
+        <select id="setAzureVoice">
+          <option value="pt-BR-AntonioNeural">Antonio (grave, natural)</option>
+          <option value="pt-BR-FabioNeural">Fábio</option>
+          <option value="pt-BR-HumbertoNeural">Humberto</option>
+          <option value="pt-BR-JulioNeural">Júlio</option>
+          <option value="pt-BR-NicolauNeural">Nicolau</option>
+          <option value="pt-BR-ValerioNeural">Valério</option>
+          <option value="pt-BR-DonatoNeural">Donato</option>
+        </select>
+      </div>
+    </div>
+    <div class="group" id="grpEleven" hidden>
+      <div class="field"><label for="setElevenKey">Chave da ElevenLabs</label><input id="setElevenKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk_..."></div>
+      <div class="field"><label for="setElevenVoice">ID da voz</label><input id="setElevenVoice" type="text" autocomplete="off" spellcheck="false"><small>Vem preenchido com uma voz masculina grave. Para trocar, copie o ID de outra voz no site.</small></div>
+      <div class="field"><label for="setElevenModel">Qualidade</label>
+        <select id="setElevenModel">
+          <option value="eleven_multilingual_v2">Máxima (gasta mais crédito)</option>
+          <option value="eleven_flash_v2_5">Rápida (metade do crédito, resposta mais ágil)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label for="setVoice">Voz do celular (reserva)</label><select id="setVoice"></select></div>
+    <div class="field"><label for="setRate">Velocidade da fala <output id="rateOut">1,05×</output></label><input id="setRate" type="range" min="0.8" max="1.5" step="0.05"></div>
+    <label class="switch"><input id="setFollow" type="checkbox"><span class="track"></span><span class="txt">Conversa corrida<small>Depois de responder, ele escuta mais um pouco sem precisar de "QAP".</small></span></label>
+    <div class="row">
+      <button type="button" class="ghost" id="testVoice">Testar voz</button>
+      <button type="button" class="ghost danger" id="clearChat">Apagar conversa</button>
+    </div>
+    <div class="group">
+      <div class="field">
+        <label>Levar para outro aparelho</label>
+        <small>Cada aparelho guarda os próprios ajustes. Copie o link abaixo aqui, mande para você mesmo (WhatsApp, e-mail) e abra no outro aparelho. As chaves vão junto, então não mande para mais ninguém.</small>
+      </div>
+      <button type="button" class="ghost" id="copyCfg">Copiar link com meus ajustes</button>
+      <textarea id="cfgOut" class="cfg-box" rows="3" readonly hidden aria-label="Link com os ajustes"></textarea>
+      <div class="field">
+        <label for="cfgIn">Ou cole aqui o link ou código</label>
+        <textarea id="cfgIn" class="cfg-box" rows="2" spellcheck="false" placeholder="Cole o link copiado no outro aparelho"></textarea>
+      </div>
+      <button type="button" class="ghost" id="importCfg">Importar ajustes</button>
+    </div>
+    <button type="button" class="save" id="saveSettings">Salvar ajustes</button>
+    <p class="ver">Nogueira versão 4</p>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const app=$('#app'), logEl=$('#log'), stateLabel=$('#stateLabel'), notice=$('#notice'), caption=$('#caption');
+const startBtn=$('#startBtn'), dock=$('#dock'), input=$('#msg'), orbHit=$('#orbHit'), fVoice=$('#setVoice');
+
+/* ---------- memória local ---------- */
+const store={
+  get(k,d){try{const v=localStorage.getItem('nogueira:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem('nogueira:'+k,JSON.stringify(v));}catch(e){}}
+};
+const DEFAULTS={apiKey:'',model:'claude-haiku-4-5-20251001',aiName:'Nogueira',userName:'Doutor Jean',greeting:'QAP e QRV, Doutor Jean!',voiceURI:'',rate:1.05,follow:true,
+  tts:'device',azureKey:'',azureRegion:'brazilsouth',azureVoice:'pt-BR-AntonioNeural',elevenKey:'',elevenVoice:'pNInz6obpgDQGcFmaJgB',elevenModel:'eleven_multilingual_v2'};
+const prefs=Object.assign({},DEFAULTS,store.get('prefs',{})||{});
+let turns=store.get('turns',[]); if(!Array.isArray(turns)) turns=[];
+const savePrefs=()=>store.set('prefs',prefs), saveTurns=()=>store.set('turns',turns.slice(-40));
+
+/* ---------- esfera ---------- */
+const orb=(()=>{
+  const cv=$('#orb'),ctx=cv.getContext('2d'),wrap=cv.parentElement;
+  const reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const TAU=Math.PI*2,N=reduce?44:96,SEG=reduce?8:11;
+  const fil=Array.from({length:N},()=>({inc:Math.acos(2*Math.random()-1),node:Math.random()*TAU,r:.6+Math.random()*.45,ph:Math.random()*TAU,sp:(.5+Math.random()*1.1)*(Math.random()<.5?-1:1),len:.6+Math.random()*1.5,w:.7+Math.random()*1.5,dh:Math.random()*36-18,wob:Math.random()*TAU}));
+  const sparks=[];
+  const P={off:{e:.08,spin:.4,hue:210,c:.88},standby:{e:.2,spin:.9,hue:200,c:.96},listening:{e:.52,spin:1.6,hue:186,c:1.07},thinking:{e:.58,spin:3,hue:228,c:.84},speaking:{e:.4,spin:1.7,hue:192,c:1.02},error:{e:.3,spin:.7,hue:24,c:.95}};
+  let st='off',energy=.1,kickV=0,spin=.4,hue=210,cmul=.9,rot=0,t=0,last=performance.now(),nextAuto=0,S=0,dpr=1;
+  function resize(){const b=wrap.getBoundingClientRect();const s=Math.max(80,Math.floor(Math.min(b.width,b.height)));dpr=Math.min(devicePixelRatio||1,2);S=s;cv.width=Math.round(s*dpr);cv.height=Math.round(s*dpr);cv.style.width=s+'px';cv.style.height=s+'px';}
+  if('ResizeObserver' in window) new ResizeObserver(resize).observe(wrap); else addEventListener('resize',resize);
+  resize();
+  function spawn(n){if(reduce)return;for(let i=0;i<n&&sparks.length<70;i++)sparks.push({a:Math.random()*TAU,d:.55,v:.25+Math.random()*.6,life:1,w:.8+Math.random()*1.4});}
+  function kick(v){kickV=Math.min(1.2,kickV+v);if(v>=.2)spawn(Math.round(v*10));}
+  function setState(s){st=P[s]?s:'off';if(s==='listening')spawn(14);if(s==='thinking')spawn(8);}
+  const lerp=(a,b,k)=>a+(b-a)*k;
+  function reticle(cx,cy,r,e,u){
+    ctx.save();ctx.translate(cx,cy);ctx.globalAlpha=1;ctx.lineWidth=1;
+    ctx.strokeStyle=`hsla(${hue},55%,72%,.18)`;ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.stroke();
+    ctx.rotate(-rot*.22);
+    const sh=new Path2D(),lg=new Path2D();
+    for(let i=0;i<72;i++){const a=i/72*TAU,L=i%6===0,r0=r-(L?9:4)*u,p=L?lg:sh;p.moveTo(Math.cos(a)*r0,Math.sin(a)*r0);p.lineTo(Math.cos(a)*r,Math.sin(a)*r);}
+    ctx.stroke(sh);ctx.strokeStyle=`hsla(${hue},70%,75%,.42)`;ctx.stroke(lg);
+    ctx.rotate(rot*.22);ctx.strokeStyle=`hsla(${hue},100%,72%,.7)`;ctx.lineWidth=2*u;ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(0,0,r+5*u,-Math.PI/2,-Math.PI/2+Math.min(1,e/1.1)*TAU*.92);ctx.stroke();ctx.restore();
+  }
+  function draw(e,dt){
+    const W=S,cx=W/2,cy=W/2,u=W/360,em=Math.min(1,e);
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.clearRect(0,0,W,W);
+    const R=W*.25*(1+(reduce?.015:.04)*Math.sin(t*1.7))*cmul*(1+.1*em);
+    reticle(cx,cy,W*.455,e,u);
+    let g=ctx.createRadialGradient(cx,cy,R*.15,cx,cy,R*1.9);
+    g.addColorStop(0,`hsla(${hue},100%,72%,${.28+.3*em})`);g.addColorStop(.5,`hsla(${hue+14},100%,56%,${.09+.14*em})`);g.addColorStop(1,`hsla(${hue+24},100%,45%,0)`);
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R*1.9,0,TAU);ctx.fill();
+    ctx.globalCompositeOperation='lighter';ctx.lineCap='round';
+    for(const f of fil){
+      f.ph+=f.sp*dt*(.55+.45*spin);
+      const ci=Math.cos(f.inc),si=Math.sin(f.inc),n=f.node+rot,cn=Math.cos(n),sn=Math.sin(n);
+      const rr=R*f.r*(1+.07*Math.sin(t*2.3+f.wob)*(.4+e));
+      ctx.strokeStyle=`hsl(${hue+f.dh},100%,72%)`;
+      let px=0,py=0;
+      for(let s=0;s<=SEG;s++){
+        const a=f.ph-f.len*(s/SEG),x0=Math.cos(a),y0=Math.sin(a),y1=y0*ci,z1=y0*si,x2=x0*cn+z1*sn,z2=-x0*sn+z1*cn,X=cx+x2*rr,Y=cy+y1*rr;
+        if(s>0){const d=(z2+1)/2,fade=1-s/SEG;ctx.globalAlpha=fade*(.16+.55*d)*(.55+.45*em);ctx.lineWidth=f.w*(.5+.7*d)*(.9+.5*em)*u;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(X,Y);ctx.stroke();}
+        px=X;py=Y;
+      }
+    }
+    for(let i=sparks.length-1;i>=0;i--){const s=sparks[i];s.d+=s.v*dt;s.life-=dt*1.4;if(s.life<=0){sparks.splice(i,1);continue;}
+      const r0=R*s.d,r1=R*(s.d+.08);ctx.globalAlpha=s.life*.8;ctx.strokeStyle=`hsl(${hue},100%,82%)`;ctx.lineWidth=s.w*u;
+      ctx.beginPath();ctx.moveTo(cx+Math.cos(s.a)*r0,cy+Math.sin(s.a)*r0);ctx.lineTo(cx+Math.cos(s.a)*r1,cy+Math.sin(s.a)*r1);ctx.stroke();}
+    const cr=R*(.46+.18*em);g=ctx.createRadialGradient(cx,cy,0,cx,cy,cr);
+    g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(.3,`hsla(${hue},100%,86%,.8)`);g.addColorStop(.7,`hsla(${hue+10},100%,62%,.25)`);g.addColorStop(1,`hsla(${hue+20},100%,55%,0)`);
+    ctx.globalAlpha=1;ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,cr,0,TAU);ctx.fill();ctx.globalCompositeOperation='source-over';
+  }
+  function frame(now){
+    const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;t+=dt;
+    const p=P[st],k=Math.min(1,dt*3.2);
+    if(st==='speaking'&&now>nextAuto){kickV+=.12+Math.random()*.22;nextAuto=now+110+Math.random()*190;}
+    else if(st==='thinking'&&now>nextAuto){kickV+=.05+Math.random()*.08;nextAuto=now+260+Math.random()*300;}
+    energy=lerp(energy,p.e,k);spin=lerp(spin,p.spin,k);cmul=lerp(cmul,p.c,k);hue=lerp(hue,p.hue,Math.min(1,dt*2));
+    kickV*=Math.exp(-dt*5.5);rot+=dt*.35*spin;
+    draw(Math.min(1.4,energy+kickV),dt);requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  return {setState,kick};
+})();
+
+/* ---------- estado ---------- */
+const STATE_TEXT={off:'desligado',standby:'na escuta',listening:'ouvindo',thinking:'processando',speaking:'falando',error:'falha'};
+let state='off', running=false, busy=false, ctl=null;
+function setState(s){state=s;app.dataset.state=s;stateLabel.textContent=STATE_TEXT[s]||'';orb.setState(s);}
+function showNotice(m){notice.textContent=m;notice.hidden=false;}
+function hideNotice(){notice.hidden=true;}
+function settle(){ // volta ao modo de espera adequado
+  if(busy) return;
+  if(running){ setState('standby'); listen('wake'); } else setState('off');
+}
+
+/* ---------- voz (saída) ---------- */
+const synth=('speechSynthesis' in window)?speechSynthesis:null;
+let voices=[];
+function loadVoices(){if(!synth)return;try{voices=synth.getVoices()||[];}catch(e){voices=[];}fillVoiceSelect();}
+if(synth){loadVoices();try{synth.addEventListener('voiceschanged',loadVoices);}catch(e){synth.onvoiceschanged=loadVoices;}}
+function pickVoice(){if(!voices.length)return null;return voices.find(v=>v.voiceURI===prefs.voiceURI)||voices.find(v=>/^pt[-_]BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang))||null;}
+function forSpeech(s){
+  return s.replace(/https?:\/\/\S+/g,'')
+    .replace(/\bQAP\b/gi,'quê á pê').replace(/\bQRV\b/gi,'quê érre vê').replace(/\bQSL\b/gi,'quê ésse éle')
+    .replace(/\bQTH\b/gi,'quê tê agá').replace(/\bQRU\b/gi,'quê érre u').replace(/\bQTR\b/gi,'quê tê érre')
+    .replace(/[*_#`>~|]/g,'').replace(/\s+[—–]\s+/g,', ').replace(/\s{2,}/g,' ').trim();
+}
+/* voz online (Azure ou ElevenLabs) com a voz do celular como reserva */
+const audio=new Audio();audio.preload='auto';
+const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+let audioUnlocked=false,cloudWarned=false;
+function unlockAudio(){if(audioUnlocked)return;audioUnlocked=true;try{audio.src=SILENT;const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
+const xmlEsc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+function cloudReady(){
+  if(prefs.tts==='azure')return !!(prefs.azureKey&&/^[a-z0-9]+$/.test(prefs.azureRegion||''));
+  if(prefs.tts==='eleven')return !!(prefs.elevenKey&&prefs.elevenVoice);
+  return false;
+}
+async function fetchTTS(text){
+  const ac=new AbortController();speaker.aborts.add(ac);
+  try{
+    let res;
+    if(prefs.tts==='azure'){
+      const pct=Math.round((prefs.rate-1)*100);
+      const ssml=`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="pt-BR"><voice name="${xmlEsc(prefs.azureVoice)}"><prosody rate="${pct>=0?'+':''}${pct}%">${xmlEsc(text)}</prosody></voice></speak>`;
+      res=await fetch(`https://${prefs.azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,{method:'POST',signal:ac.signal,
+        headers:{'Ocp-Apim-Subscription-Key':prefs.azureKey,'Content-Type':'application/ssml+xml','X-Microsoft-OutputFormat':'audio-24khz-48kbitrate-mono-mp3'},body:ssml});
+    }else{
+      const speed=Math.min(1.2,Math.max(0.7,prefs.rate));
+      res=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(prefs.elevenVoice)}?output_format=mp3_44100_128`,{method:'POST',signal:ac.signal,
+        headers:{'xi-api-key':prefs.elevenKey,'Content-Type':'application/json','Accept':'audio/mpeg'},
+        body:JSON.stringify({text,model_id:prefs.elevenModel,voice_settings:{stability:0.45,similarity_boost:0.8,speed}})});
+    }
+    if(!res.ok){const e=new Error('tts');e.status=res.status;throw e;}
+    return URL.createObjectURL(await res.blob());
+  }finally{speaker.aborts.delete(ac);}
+}
+function cloudFail(e){
+  if(e&&e.name==='AbortError')return;
+  if(cloudWarned)return;cloudWarned=true;
+  const who=prefs.tts==='azure'?'do Azure':'da ElevenLabs';
+  const st=e&&e.status;
+  let m;
+  if(st===401||st===403)m=`A chave ${who} não foi aceita${prefs.tts==='azure'?' (confira também a região)':''}. Usando a voz do celular por enquanto.`;
+  else if(st===402||st===429)m=`Acabou a cota ou o crédito ${who}. Usando a voz do celular por enquanto.`;
+  else if(st===404||st===400)m=`A voz escolhida ${who} não foi encontrada. Confira o nome ou o ID da voz nos ajustes.`;
+  else m=`Não consegui falar com o serviço ${who}. Usando a voz do celular por enquanto.`;
+  showNotice(m);
+}
+function speakDevice(text){
+  return new Promise(res=>{
+    if(!synth){res();return;}
+    const u=new SpeechSynthesisUtterance(text),v=pickVoice();
+    if(v){u.voice=v;u.lang=v.lang;}else u.lang='pt-BR';
+    u.rate=prefs.rate;
+    u.onstart=()=>{if(state!=='speaking')setState('speaking');};
+    u.onboundary=()=>orb.kick(.3);
+    const done=()=>{speaker.keep=speaker.keep.filter(x=>x!==u);res();};
+    u.onend=done;u.onerror=done;speaker.keep.push(u);
+    try{synth.speak(u);}catch(e){done();}
+  });
+}
+function playUrl(url){
+  return new Promise(res=>{
+    const done=()=>{audio.onended=audio.onerror=audio.onplaying=null;URL.revokeObjectURL(url);res();};
+    audio.onended=done;audio.onerror=done;
+    audio.onplaying=()=>{if(state!=='speaking')setState('speaking');};
+    audio.src=url;
+    const p=audio.play();if(p&&p.catch)p.catch(done);
+  });
+}
+const speaker={
+  pos:0,pending:0,gen:0,chain:Promise.resolve(),keep:[],aborts:new Set(),onIdle:null,
+  reset(){this.pos=0;},
+  feed(text,final){
+    const rest=text.slice(this.pos);let chunk;
+    if(final)chunk=rest;else{const m=rest.match(/^[\s\S]*[.!?…](?=\s)/);if(!m||m[0].trim().length<18)return;chunk=m[0];}
+    this.pos+=chunk.length;const c=forSpeech(chunk);if(c)this.say(c);
+  },
+  say(text){
+    stopListening();
+    this.pending++;const gen=this.gen;
+    const job=cloudReady()?fetchTTS(text).catch(e=>{cloudFail(e);return null;}):Promise.resolve(null);
+    this.chain=this.chain.then(()=>job).then(url=>{
+      if(gen!==this.gen){if(url)URL.revokeObjectURL(url);return;}
+      return url?playUrl(url):speakDevice(text);
+    }).catch(()=>{}).then(()=>{
+      if(gen!==this.gen)return;
+      this.pending=Math.max(0,this.pending-1);
+      if(this.pending===0&&!busy)this.finishIdle();
+    });
+  },
+  finishIdle(){const f=this.onIdle;this.onIdle=null;if(f)f();else settle();},
+  stop(){
+    this.gen++;this.chain=Promise.resolve();
+    this.aborts.forEach(a=>{try{a.abort();}catch(e){}});this.aborts.clear();
+    try{audio.pause();audio.onended=audio.onerror=audio.onplaying=null;}catch(e){}
+    if(synth){try{synth.cancel();}catch(e){}}
+    this.pending=0;this.keep=[];this.onIdle=null;
+  },
+  get active(){return this.pending>0;}
+};
+function sayThen(text,next){speaker.stop();speaker.onIdle=next;speaker.say(forSpeech(text));}
+
+/* ---------- escuta (entrada) ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null, recMode=null, heard='', followUp=false;
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+function wakeWord(){return norm(prefs.aiName||'Nogueira').split(' ')[0]||'nogueira';}
+function stopListening(){recMode=null;if(rec){const r=rec;rec=null;try{r.abort();}catch(e){}}}
+function listen(mode){
+  if(!SR||!running)return;
+  stopListening();
+  recMode=mode;heard='';
+  const r=new SR();rec=r;
+  r.lang='pt-BR';r.continuous=(mode==='wake');r.interimResults=true;r.maxAlternatives=3;
+  r.onresult=(e)=>{
+    if(rec!==r)return;
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const res=e.results[i];
+      if(mode==='wake'){
+        const w=wakeWord();
+        for(let a=0;a<res.length;a++){
+          const n=norm(res[a].transcript);
+          const at=n.lastIndexOf(w);
+          if(at>=0){
+            const tail=res.isFinal?n.slice(at+w.length).trim():'';
+            onWake(res[a].transcript,tail);return;
+          }
+        }
+      }else{
+        const txt=res[0].transcript;
+        caption.textContent=txt;orb.kick(.12);
+        if(res.isFinal){heard=txt.trim();}
+      }
+    }
+    if(mode==='command'&&heard){const h=heard;stopListening();caption.textContent='';ask(h);}
+  };
+  r.onerror=(e)=>{
+    if(rec!==r)return;
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      running=false;stopListening();setState('off');startBtn.hidden=false;
+      showNotice('O navegador bloqueou o microfone. Libere o microfone para este site nas configurações do Chrome e toque em Ligar de novo.');
+    }else if(e.error==='audio-capture'){showNotice('Não achei microfone neste aparelho.');}
+  };
+  r.onend=()=>{
+    if(rec!==r)return;rec=null;
+    if(!running||busy||speaker.active)return;
+    if(mode==='wake'){setTimeout(()=>{if(running&&!busy&&!speaker.active&&recMode==='wake'&&!rec)listen('wake');},300);}
+    else{caption.textContent='';setState('standby');listen('wake');}
+  };
+  try{r.start();}catch(e){setTimeout(()=>{if(running&&recMode===mode&&!rec)listen(mode);},600);}
+}
+function onWake(raw,tail){
+  stopListening();
+  orb.kick(.6);
+  caption.textContent='';
+  if(tail&&tail.length>3){ // "QAP Nogueira, que horas são?" numa frase só
+    sayThen(prefs.greeting,()=>ask(raw.replace(new RegExp('^.*?'+(prefs.aiName||'Nogueira')+'[\\s,.!?]*','i'),'').trim()||tail));
+  }else{
+    sayThen(prefs.greeting,()=>startCommand());
+  }
+  addMsg('ai',prefs.greeting);
+}
+function startCommand(){if(!running){settle();return;}setState('listening');listen('command');}
+
+/* ---------- cérebro (API da Anthropic) ---------- */
+function systemPrompt(){
+  let now;try{now=new Date().toLocaleString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){now=new Date().toString();}
+  const nm=prefs.aiName||'Nogueira',who=prefs.userName||'o usuário';
+  return [
+    `Você é ${nm}, o assistente pessoal de voz de ${who}, policial. Tudo o que você escrever será lido em voz alta por um sintetizador no celular.`,
+    '',
+    'Como responder:',
+    '- Português do Brasil, falado e natural. Frases curtas, ritmo de conversa.',
+    '- Em geral de uma a quatro frases. Só se estenda quando ele pedir detalhe.',
+    '- Sem markdown, sem listas com marcadores, sem emojis, sem links, sem travessões. Para enumerar, fale "primeiro", "depois", "por último".',
+    '- Nada de frases feitas como "ótima pergunta" ou "espero ter ajudado". Vá direto ao ponto.',
+    `- Personalidade: parceiro leal de plantão, prático, com humor seco e um pouco ácido. Trate-o como ${who} ou "doutor". Provoque de leve quando couber, nunca bajule.`,
+    '- Pode usar códigos Q de rádio de vez em quando, com naturalidade (QSL para entendido, QAP, QRV, QTH para local).',
+    '- Você não tem acesso à internet, agenda, clima, notícias, sistemas policiais nem aos aplicativos do celular. Se pedirem algo assim, diga numa frase que não alcança isso daqui e ofereça o que dá para fazer.',
+    '- Escreva números, horas e siglas do jeito que soam bem lidos em voz alta.',
+    '',
+    `Data e hora no aparelho: ${now}.`
+  ].join('\n');
+}
+function apiMessages(){
+  const out=[];
+  for(const t of turns.slice(-20)){
+    if(!t.content||!t.content.trim())continue;
+    if(out.length&&out[out.length-1].role===t.role)out[out.length-1].content+='\n'+t.content;
+    else out.push({role:t.role,content:t.content});
+  }
+  while(out.length&&out[0].role!=='user')out.shift();
+  return out;
+}
+function apiError(status,body){
+  const msg=(body&&body.error&&body.error.message)||'';
+  if(status===401)return 'A chave da API não foi aceita. Confira nos ajustes se colou ela inteira.';
+  if(status===403)return 'Essa chave não tem permissão para usar a API. Veja no painel da Anthropic.';
+  if(status===429)return 'Muitas perguntas seguidas ou limite de gasto atingido. Espere um pouco ou aumente o limite no painel.';
+  if(status===529||status===503)return 'Os servidores estão sobrecarregados agora. Tente de novo em alguns segundos.';
+  if(status===400&&/credit|balance/i.test(msg))return 'Acabaram os créditos da conta. Coloque saldo ou cartão em Billing, no painel da Anthropic.';
+  if(status===400&&/model/i.test(msg))return 'Esse modelo não está disponível para a sua chave. Troque o cérebro nos ajustes.';
+  return 'Deu erro na resposta'+(status?' ('+status+')':'')+'. Tente de novo.';
+}
+async function stream(onText){
+  ctl=new AbortController();
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',signal:ctl.signal,
+    headers:{'content-type':'application/json','x-api-key':prefs.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:prefs.model,max_tokens:700,system:systemPrompt(),messages:apiMessages(),stream:true})
+  });
+  if(!res.ok){let b=null;try{b=await res.json();}catch(e){}const err=new Error('api');err.friendly=apiError(res.status,b);throw err;}
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf='',text='';
+  for(;;){
+    const {value,done}=await reader.read();if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    let i;
+    while((i=buf.indexOf('\n\n'))>=0){
+      const block=buf.slice(0,i);buf=buf.slice(i+2);
+      for(const line of block.split('\n')){
+        if(!line.startsWith('data:'))continue;
+        let ev;try{ev=JSON.parse(line.slice(5).trim());}catch(e){continue;}
+        if(ev.type==='content_block_delta'&&ev.delta&&ev.delta.type==='text_delta'){text+=ev.delta.text;onText(text);}
+        else if(ev.type==='error'){const err=new Error('api');err.friendly=apiError(0,ev);err.partial=text;throw err;}
+      }
+    }
+  }
+  return text;
+}
+
+/* ---------- conversa ---------- */
+function scrollLog(){logEl.scrollTop=logEl.scrollHeight;}
+function addMsg(role,text){
+  const el=document.createElement('div');el.className='msg '+(role==='user'?'user':'ai');el.textContent=text;
+  if(role!=='user'){logEl.querySelectorAll('.msg.ai.latest').forEach(n=>n.classList.remove('latest'));el.classList.add('latest');}
+  logEl.appendChild(el);scrollLog();return el;
+}
+function renderLog(){
+  logEl.textContent='';
+  if(!turns.length){addMsg('ai',`Na escuta assim que você ligar. É só chamar: "QAP ${prefs.aiName}".`);}
+  else turns.slice(-12).forEach(t=>addMsg(t.role,t.content));
+}
+async function ask(raw){
+  const text=String(raw||'').trim();if(!text||busy)return;
+  if(!prefs.apiKey){showNotice('Falta a chave da API. Abra os ajustes e cole a sua.');openSheet();return;}
+  hideNotice();stopListening();speaker.stop();
+  addMsg('user',text);turns.push({role:'user',content:text});
+  const bubble=addMsg('ai','…');
+  busy=true;setState('thinking');speaker.reset();
+  let failed=false;
+  try{
+    const answer=await stream(t=>{bubble.textContent=t;scrollLog();orb.kick(.1);speaker.feed(t,false);});
+    if(!answer.trim())throw Object.assign(new Error('empty'),{friendly:'Fiquei sem resposta. Pergunte de outro jeito.'});
+    bubble.textContent=answer;turns.push({role:'assistant',content:answer});
+    busy=false;
+    speaker.onIdle=()=>{ if(running&&prefs.follow){followUp=true;startCommand();} else settle(); };
+    speaker.feed(answer,true);
+    if(!speaker.active)speaker.finishIdle();
+  }catch(e){
+    busy=false;
+    if(e.name==='AbortError'){ if(bubble.textContent==='…')bubble.remove(); else turns.push({role:'assistant',content:bubble.textContent}); }
+    else{
+      failed=true;speaker.stop();
+      if(e.partial)turns.push({role:'assistant',content:e.partial});
+      if(bubble.textContent==='…')bubble.textContent='';
+      const s=document.createElement('span');s.className='err';
+      s.textContent=e.friendly||'Sem conexão com a internet ou com a Anthropic. Confira a rede e tente de novo.';
+      bubble.appendChild(s);
+    }
+  }finally{
+    ctl=null;saveTurns();
+    if(failed){setState('error');setTimeout(()=>{if(state==='error')settle();},1800);}
+    else if(!speaker.active&&state==='thinking')settle();
+  }
+}
+function stopAll(){if(ctl)ctl.abort();speaker.stop();busy=false;caption.textContent='';settle();}
+
+/* ---------- controles ---------- */
+let wake=null;
+async function requestWake(){try{if('wakeLock' in navigator&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null;});}}catch(e){wake=null;}}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){if(running){requestWake();if(!busy&&!speaker.active&&!rec)settle();}}
+});
+startBtn.addEventListener('click',()=>{
+  unlockAudio();
+  if(!SR){showNotice('Este navegador não tem reconhecimento de voz. No Android use o Chrome; no iPhone, o Safari. Por enquanto dá para digitar.');dock.hidden=false;startBtn.hidden=true;return;}
+  if(synth){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;synth.speak(u);}catch(e){}}
+  unlockAudio();
+  running=true;startBtn.hidden=true;dock.hidden=false;hideNotice();
+  if(!prefs.apiKey)showNotice('Falta a chave da API. Abra os ajustes (canto de cima) e cole a sua.');
+  requestWake();settle();
+});
+orbHit.addEventListener('click',()=>{
+  if(busy||speaker.active){stopAll();return;}
+  if(!running){startBtn.click();return;}
+  if(state==='listening'){stopListening();settle();return;}
+  startCommand();
+});
+input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,110)+'px';});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();dock.requestSubmit();}});
+dock.addEventListener('submit',e=>{e.preventDefault();const v=input.value;input.value='';input.style.height='auto';input.blur();ask(v);});
+
+/* ---------- ajustes ---------- */
+const sheet=$('#sheet'),fKey=$('#setKey'),fModel=$('#setModel'),fAi=$('#setAiName'),fUser=$('#setUserName'),fGreet=$('#setGreeting'),fRate=$('#setRate'),rateOut=$('#rateOut'),fFollow=$('#setFollow'),clearBtn=$('#clearChat');
+const fmtRate=r=>Number(r).toFixed(2).replace('.',',')+'×';
+function fillVoiceSelect(){
+  fVoice.textContent='';
+  if(!synth){fVoice.add(new Option('Sem voz neste navegador',''));fVoice.disabled=true;return;}
+  if(!voices.length){fVoice.add(new Option('Voz padrão do aparelho',''));return;}
+  const cur=pickVoice();
+  const add=(arr,label)=>{if(!arr.length)return;const g=document.createElement('optgroup');g.label=label;arr.forEach(v=>{const o=new Option(`${v.name} (${v.lang})`,v.voiceURI);if(cur&&v.voiceURI===cur.voiceURI)o.selected=true;g.appendChild(o);});fVoice.appendChild(g);};
+  add(voices.filter(v=>/^pt/i.test(v.lang)),'Português');add(voices.filter(v=>!/^pt/i.test(v.lang)),'Outros idiomas');
+}
+function applyPrefs(){$('#aiName').textContent=prefs.aiName;$('#hint').textContent=`Diga "QAP ${prefs.aiName}" para chamar. Toque na esfera para falar direto ou para interromper.`;}
+const fTts=$('#setTts'),fAzKey=$('#setAzureKey'),fAzReg=$('#setAzureRegion'),fAzVoice=$('#setAzureVoice'),fElKey=$('#setElevenKey'),fElVoice=$('#setElevenVoice'),fElModel=$('#setElevenModel');
+function showTtsGroups(){$('#grpAzure').hidden=prefs.tts!=='azure';$('#grpEleven').hidden=prefs.tts!=='eleven';}
+const ttsChanged=()=>{cloudWarned=false;savePrefs();};
+fTts.addEventListener('change',()=>{prefs.tts=fTts.value;showTtsGroups();ttsChanged();});
+fAzKey.addEventListener('input',()=>{prefs.azureKey=fAzKey.value.trim();ttsChanged();});
+fAzReg.addEventListener('input',()=>{prefs.azureRegion=fAzReg.value.trim().toLowerCase().replace(/\s+/g,'');ttsChanged();});
+fAzVoice.addEventListener('change',()=>{prefs.azureVoice=fAzVoice.value;ttsChanged();});
+fElKey.addEventListener('input',()=>{prefs.elevenKey=fElKey.value.trim();ttsChanged();});
+fElVoice.addEventListener('input',()=>{prefs.elevenVoice=fElVoice.value.trim();ttsChanged();});
+fElModel.addEventListener('change',()=>{prefs.elevenModel=fElModel.value;ttsChanged();});
+function openSheet(){
+  fTts.value=prefs.tts;fAzKey.value=prefs.azureKey;fAzReg.value=prefs.azureRegion;fAzVoice.value=prefs.azureVoice;
+  fElKey.value=prefs.elevenKey;fElVoice.value=prefs.elevenVoice;fElModel.value=prefs.elevenModel;showTtsGroups();
+  fKey.value=prefs.apiKey;fModel.value=prefs.model;fAi.value=prefs.aiName;fUser.value=prefs.userName;fGreet.value=prefs.greeting;
+  fRate.value=prefs.rate;rateOut.textContent=fmtRate(prefs.rate);fFollow.checked=prefs.follow;fillVoiceSelect();sheet.hidden=false;
+}
+function closeSheet(){sheet.hidden=true;if(prefs.apiKey&&/chave da API/.test(notice.textContent))hideNotice();}
+$('#openSettings').addEventListener('click',openSheet);
+$('#closeSheet').addEventListener('click',closeSheet);
+sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet();});
+fKey.addEventListener('input',()=>{prefs.apiKey=fKey.value.trim();savePrefs();});
+fModel.addEventListener('change',()=>{prefs.model=fModel.value;savePrefs();});
+fAi.addEventListener('input',()=>{prefs.aiName=fAi.value.trim()||DEFAULTS.aiName;savePrefs();applyPrefs();});
+fUser.addEventListener('input',()=>{prefs.userName=fUser.value.trim();savePrefs();});
+fGreet.addEventListener('input',()=>{prefs.greeting=fGreet.value.trim()||DEFAULTS.greeting;savePrefs();});
+fVoice.addEventListener('change',()=>{prefs.voiceURI=fVoice.value;savePrefs();});
+fRate.addEventListener('input',()=>{prefs.rate=Number(fRate.value)||1;rateOut.textContent=fmtRate(prefs.rate);savePrefs();});
+fFollow.addEventListener('change',()=>{prefs.follow=fFollow.checked;savePrefs();});
+$('#testVoice').addEventListener('click',()=>{unlockAudio();cloudWarned=false;hideNotice();sayThen(prefs.greeting,()=>settle());});
+let armed=false,armT=null;
+clearBtn.addEventListener('click',()=>{
+  if(!armed){armed=true;clearBtn.textContent='Toque de novo para apagar';armT=setTimeout(()=>{armed=false;clearBtn.textContent='Apagar conversa';},3000);return;}
+  clearTimeout(armT);armed=false;turns=[];saveTurns();renderLog();clearBtn.textContent='Conversa apagada';
+  setTimeout(()=>{clearBtn.textContent='Apagar conversa';},1500);
+});
+addEventListener('pagehide',()=>{speaker.stop();stopListening();});
+
+/* ---------- salvar e levar ajustes entre aparelhos ---------- */
+const SYNC_KEYS=['apiKey','model','aiName','userName','greeting','rate','follow','tts','azureKey','azureRegion','azureVoice','elevenKey','elevenVoice','elevenModel'];
+function readForm(){
+  prefs.apiKey=fKey.value.trim();prefs.model=fModel.value;
+  prefs.aiName=fAi.value.trim()||DEFAULTS.aiName;prefs.userName=fUser.value.trim();prefs.greeting=fGreet.value.trim()||DEFAULTS.greeting;
+  prefs.rate=Number(fRate.value)||1;prefs.follow=fFollow.checked;prefs.voiceURI=fVoice.value||prefs.voiceURI;
+  prefs.tts=fTts.value;prefs.azureKey=fAzKey.value.trim();prefs.azureRegion=fAzReg.value.trim().toLowerCase().replace(/\s+/g,'');
+  prefs.azureVoice=fAzVoice.value;prefs.elevenKey=fElKey.value.trim();prefs.elevenVoice=fElVoice.value.trim();prefs.elevenModel=fElModel.value;
+}
+function encodeCfg(){
+  const o={};SYNC_KEYS.forEach(k=>{o[k]=prefs[k];});
+  return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodeCfg(s){
+  s=String(s||'').trim();
+  const m=s.match(/cfg=([A-Za-z0-9_-]+)/);if(m)s=m[1];
+  s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';
+  const o=JSON.parse(decodeURIComponent(escape(atob(s))));
+  if(!o||typeof o!=='object')throw new Error('cfg');
+  let n=0;SYNC_KEYS.forEach(k=>{if(k in o&&typeof o[k]===typeof DEFAULTS[k]){prefs[k]=o[k];n++;}});
+  if(!n)throw new Error('cfg');
+  savePrefs();cloudWarned=false;applyPrefs();
+}
+$('#saveSettings').addEventListener('click',()=>{
+  readForm();savePrefs();cloudWarned=false;applyPrefs();
+  const b=$('#saveSettings');b.textContent='Salvo';
+  setTimeout(()=>{b.textContent='Salvar ajustes';closeSheet();},700);
+});
+$('#copyCfg').addEventListener('click',async()=>{
+  readForm();savePrefs();
+  const link=location.origin+location.pathname+'#cfg='+encodeCfg();
+  const out=$('#cfgOut'),btn=$('#copyCfg');
+  out.value=link;out.hidden=false;
+  try{await navigator.clipboard.writeText(link);btn.textContent='Link copiado';}
+  catch(e){out.focus();out.select();btn.textContent='Selecionei o link, copie à mão';}
+  setTimeout(()=>{btn.textContent='Copiar link com meus ajustes';},2500);
+});
+$('#importCfg').addEventListener('click',()=>{
+  const btn=$('#importCfg');
+  try{decodeCfg($('#cfgIn').value);$('#cfgIn').value='';openSheet();btn.textContent='Ajustes importados';}
+  catch(e){btn.textContent='Esse código não serve, copie de novo';}
+  setTimeout(()=>{btn.textContent='Importar ajustes';},2500);
+});
+if(/^#cfg=/.test(location.hash)){
+  try{decodeCfg(location.hash);showNotice('Ajustes importados do outro aparelho. Pode ligar o Nogueira.');}
+  catch(e){showNotice('O link de ajustes veio quebrado. Copie de novo no outro aparelho.');}
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+}
+
+applyPrefs();renderLog();setState('off');
+})();
+</script>
+</body>
+</html>
