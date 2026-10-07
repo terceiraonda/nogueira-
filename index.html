@@ -76,6 +76,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .switch input:checked + .track{background:var(--plasma)}
 .switch input:checked + .track::after{transform:translateX(18px);background:var(--ink)}
 .txt small{display:block;margin-top:2px;color:var(--muted);font-size:13px}
+.group{display:flex;flex-direction:column;gap:18px;padding:14px;border:1px solid var(--line);border-radius:14px}
 .row{display:flex;flex-wrap:wrap;gap:10px}
 .ghost{padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:15px;cursor:pointer}
 .ghost.danger{color:var(--warm)}
@@ -120,7 +121,40 @@ button,input,select,textarea{font:inherit;color:inherit}
     <div class="field"><label for="setAiName">Nome do assistente</label><input id="setAiName" type="text" maxlength="24"><small>A ativação é "QAP" + esse nome.</small></div>
     <div class="field"><label for="setUserName">Como ele te chama</label><input id="setUserName" type="text" maxlength="32"></div>
     <div class="field"><label for="setGreeting">Resposta ao ser chamado</label><input id="setGreeting" type="text" maxlength="60"></div>
-    <div class="field"><label for="setVoice">Voz</label><select id="setVoice"></select></div>
+    <div class="field">
+      <label for="setTts">Motor de voz</label>
+      <select id="setTts">
+        <option value="device">Voz do celular (grátis)</option>
+        <option value="azure">Microsoft Azure (voz neural)</option>
+        <option value="eleven">ElevenLabs (a mais humana)</option>
+      </select>
+    </div>
+    <div class="group" id="grpAzure" hidden>
+      <div class="field"><label for="setAzureKey">Chave do Azure</label><input id="setAzureKey" type="password" autocomplete="off" spellcheck="false" placeholder="KEY 1 do recurso de Fala"></div>
+      <div class="field"><label for="setAzureRegion">Região do Azure</label><input id="setAzureRegion" type="text" autocomplete="off" spellcheck="false" placeholder="brazilsouth"><small>Do jeito que aparece em "Location/Region", sem espaço. Ex.: brazilsouth, eastus.</small></div>
+      <div class="field"><label for="setAzureVoice">Voz do Azure</label>
+        <select id="setAzureVoice">
+          <option value="pt-BR-AntonioNeural">Antonio (grave, natural)</option>
+          <option value="pt-BR-FabioNeural">Fábio</option>
+          <option value="pt-BR-HumbertoNeural">Humberto</option>
+          <option value="pt-BR-JulioNeural">Júlio</option>
+          <option value="pt-BR-NicolauNeural">Nicolau</option>
+          <option value="pt-BR-ValerioNeural">Valério</option>
+          <option value="pt-BR-DonatoNeural">Donato</option>
+        </select>
+      </div>
+    </div>
+    <div class="group" id="grpEleven" hidden>
+      <div class="field"><label for="setElevenKey">Chave da ElevenLabs</label><input id="setElevenKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk_..."></div>
+      <div class="field"><label for="setElevenVoice">ID da voz</label><input id="setElevenVoice" type="text" autocomplete="off" spellcheck="false"><small>Vem preenchido com uma voz masculina grave. Para trocar, copie o ID de outra voz no site.</small></div>
+      <div class="field"><label for="setElevenModel">Qualidade</label>
+        <select id="setElevenModel">
+          <option value="eleven_multilingual_v2">Máxima (gasta mais crédito)</option>
+          <option value="eleven_flash_v2_5">Rápida (metade do crédito, resposta mais ágil)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label for="setVoice">Voz do celular (reserva)</label><select id="setVoice"></select></div>
     <div class="field"><label for="setRate">Velocidade da fala <output id="rateOut">1,05×</output></label><input id="setRate" type="range" min="0.8" max="1.5" step="0.05"></div>
     <label class="switch"><input id="setFollow" type="checkbox"><span class="track"></span><span class="txt">Conversa corrida<small>Depois de responder, ele escuta mais um pouco sem precisar de "QAP".</small></span></label>
     <div class="row">
@@ -142,7 +176,8 @@ const store={
   get(k,d){try{const v=localStorage.getItem('nogueira:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},
   set(k,v){try{localStorage.setItem('nogueira:'+k,JSON.stringify(v));}catch(e){}}
 };
-const DEFAULTS={apiKey:'',model:'claude-haiku-4-5-20251001',aiName:'Nogueira',userName:'Doutor Jean',greeting:'QAP e QRV, Doutor Jean!',voiceURI:'',rate:1.05,follow:true};
+const DEFAULTS={apiKey:'',model:'claude-haiku-4-5-20251001',aiName:'Nogueira',userName:'Doutor Jean',greeting:'QAP e QRV, Doutor Jean!',voiceURI:'',rate:1.05,follow:true,
+  tts:'device',azureKey:'',azureRegion:'brazilsouth',azureVoice:'pt-BR-AntonioNeural',elevenKey:'',elevenVoice:'pNInz6obpgDQGcFmaJgB',elevenModel:'eleven_multilingual_v2'};
 const prefs=Object.assign({},DEFAULTS,store.get('prefs',{})||{});
 let turns=store.get('turns',[]); if(!Array.isArray(turns)) turns=[];
 const savePrefs=()=>store.set('prefs',prefs), saveTurns=()=>store.set('turns',turns.slice(-40));
@@ -237,30 +272,99 @@ function forSpeech(s){
     .replace(/\bQTH\b/gi,'quê tê agá').replace(/\bQRU\b/gi,'quê érre u').replace(/\bQTR\b/gi,'quê tê érre')
     .replace(/[*_#`>~|]/g,'').replace(/\s+[—–]\s+/g,', ').replace(/\s{2,}/g,' ').trim();
 }
-const speaker={
-  pos:0,pending:0,keep:[],onIdle:null,
-  reset(){this.pos=0;},
-  feed(text,final){
-    if(!synth)return;
-    const rest=text.slice(this.pos);let chunk;
-    if(final)chunk=rest;else{const m=rest.match(/^[\s\S]*[.!?…](?=\s)/);if(!m||m[0].trim().length<18)return;chunk=m[0];}
-    this.pos+=chunk.length;const c=forSpeech(chunk);if(c)this.say(c);
-  },
-  say(text){
-    if(!synth){this.finishIdle();return;}
-    stopListening();
+/* voz online (Azure ou ElevenLabs) com a voz do celular como reserva */
+const audio=new Audio();audio.preload='auto';
+const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+let audioUnlocked=false,cloudWarned=false;
+function unlockAudio(){if(audioUnlocked)return;audioUnlocked=true;try{audio.src=SILENT;const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
+const xmlEsc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+function cloudReady(){
+  if(prefs.tts==='azure')return !!(prefs.azureKey&&/^[a-z0-9]+$/.test(prefs.azureRegion||''));
+  if(prefs.tts==='eleven')return !!(prefs.elevenKey&&prefs.elevenVoice);
+  return false;
+}
+async function fetchTTS(text){
+  const ac=new AbortController();speaker.aborts.add(ac);
+  try{
+    let res;
+    if(prefs.tts==='azure'){
+      const pct=Math.round((prefs.rate-1)*100);
+      const ssml=`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="pt-BR"><voice name="${xmlEsc(prefs.azureVoice)}"><prosody rate="${pct>=0?'+':''}${pct}%">${xmlEsc(text)}</prosody></voice></speak>`;
+      res=await fetch(`https://${prefs.azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,{method:'POST',signal:ac.signal,
+        headers:{'Ocp-Apim-Subscription-Key':prefs.azureKey,'Content-Type':'application/ssml+xml','X-Microsoft-OutputFormat':'audio-24khz-48kbitrate-mono-mp3'},body:ssml});
+    }else{
+      const speed=Math.min(1.2,Math.max(0.7,prefs.rate));
+      res=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(prefs.elevenVoice)}?output_format=mp3_44100_128`,{method:'POST',signal:ac.signal,
+        headers:{'xi-api-key':prefs.elevenKey,'Content-Type':'application/json','Accept':'audio/mpeg'},
+        body:JSON.stringify({text,model_id:prefs.elevenModel,voice_settings:{stability:0.45,similarity_boost:0.8,speed}})});
+    }
+    if(!res.ok){const e=new Error('tts');e.status=res.status;throw e;}
+    return URL.createObjectURL(await res.blob());
+  }finally{speaker.aborts.delete(ac);}
+}
+function cloudFail(e){
+  if(e&&e.name==='AbortError')return;
+  if(cloudWarned)return;cloudWarned=true;
+  const who=prefs.tts==='azure'?'do Azure':'da ElevenLabs';
+  const st=e&&e.status;
+  let m;
+  if(st===401||st===403)m=`A chave ${who} não foi aceita${prefs.tts==='azure'?' (confira também a região)':''}. Usando a voz do celular por enquanto.`;
+  else if(st===402||st===429)m=`Acabou a cota ou o crédito ${who}. Usando a voz do celular por enquanto.`;
+  else if(st===404||st===400)m=`A voz escolhida ${who} não foi encontrada. Confira o nome ou o ID da voz nos ajustes.`;
+  else m=`Não consegui falar com o serviço ${who}. Usando a voz do celular por enquanto.`;
+  showNotice(m);
+}
+function speakDevice(text){
+  return new Promise(res=>{
+    if(!synth){res();return;}
     const u=new SpeechSynthesisUtterance(text),v=pickVoice();
     if(v){u.voice=v;u.lang=v.lang;}else u.lang='pt-BR';
     u.rate=prefs.rate;
     u.onstart=()=>{if(state!=='speaking')setState('speaking');};
     u.onboundary=()=>orb.kick(.3);
-    const done=()=>{this.pending=Math.max(0,this.pending-1);this.keep=this.keep.filter(x=>x!==u);if(this.pending===0&&!busy)this.finishIdle();};
-    u.onend=done;u.onerror=done;
-    this.pending++;this.keep.push(u);
+    const done=()=>{speaker.keep=speaker.keep.filter(x=>x!==u);res();};
+    u.onend=done;u.onerror=done;speaker.keep.push(u);
     try{synth.speak(u);}catch(e){done();}
+  });
+}
+function playUrl(url){
+  return new Promise(res=>{
+    const done=()=>{audio.onended=audio.onerror=audio.onplaying=null;URL.revokeObjectURL(url);res();};
+    audio.onended=done;audio.onerror=done;
+    audio.onplaying=()=>{if(state!=='speaking')setState('speaking');};
+    audio.src=url;
+    const p=audio.play();if(p&&p.catch)p.catch(done);
+  });
+}
+const speaker={
+  pos:0,pending:0,gen:0,chain:Promise.resolve(),keep:[],aborts:new Set(),onIdle:null,
+  reset(){this.pos=0;},
+  feed(text,final){
+    const rest=text.slice(this.pos);let chunk;
+    if(final)chunk=rest;else{const m=rest.match(/^[\s\S]*[.!?…](?=\s)/);if(!m||m[0].trim().length<18)return;chunk=m[0];}
+    this.pos+=chunk.length;const c=forSpeech(chunk);if(c)this.say(c);
+  },
+  say(text){
+    stopListening();
+    this.pending++;const gen=this.gen;
+    const job=cloudReady()?fetchTTS(text).catch(e=>{cloudFail(e);return null;}):Promise.resolve(null);
+    this.chain=this.chain.then(()=>job).then(url=>{
+      if(gen!==this.gen){if(url)URL.revokeObjectURL(url);return;}
+      return url?playUrl(url):speakDevice(text);
+    }).catch(()=>{}).then(()=>{
+      if(gen!==this.gen)return;
+      this.pending=Math.max(0,this.pending-1);
+      if(this.pending===0&&!busy)this.finishIdle();
+    });
   },
   finishIdle(){const f=this.onIdle;this.onIdle=null;if(f)f();else settle();},
-  stop(){if(synth){try{synth.cancel();}catch(e){}}this.pending=0;this.keep=[];this.onIdle=null;},
+  stop(){
+    this.gen++;this.chain=Promise.resolve();
+    this.aborts.forEach(a=>{try{a.abort();}catch(e){}});this.aborts.clear();
+    try{audio.pause();audio.onended=audio.onerror=audio.onplaying=null;}catch(e){}
+    if(synth){try{synth.cancel();}catch(e){}}
+    this.pending=0;this.keep=[];this.onIdle=null;
+  },
   get active(){return this.pending>0;}
 };
 function sayThen(text,next){speaker.stop();speaker.onIdle=next;speaker.say(forSpeech(text));}
@@ -447,8 +551,10 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){if(running){requestWake();if(!busy&&!speaker.active&&!rec)settle();}}
 });
 startBtn.addEventListener('click',()=>{
+  unlockAudio();
   if(!SR){showNotice('Este navegador não tem reconhecimento de voz. No Android use o Chrome; no iPhone, o Safari. Por enquanto dá para digitar.');dock.hidden=false;startBtn.hidden=true;return;}
   if(synth){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;synth.speak(u);}catch(e){}}
+  unlockAudio();
   running=true;startBtn.hidden=true;dock.hidden=false;hideNotice();
   if(!prefs.apiKey)showNotice('Falta a chave da API. Abra os ajustes (canto de cima) e cole a sua.');
   requestWake();settle();
@@ -475,7 +581,19 @@ function fillVoiceSelect(){
   add(voices.filter(v=>/^pt/i.test(v.lang)),'Português');add(voices.filter(v=>!/^pt/i.test(v.lang)),'Outros idiomas');
 }
 function applyPrefs(){$('#aiName').textContent=prefs.aiName;$('#hint').textContent=`Diga "QAP ${prefs.aiName}" para chamar. Toque na esfera para falar direto ou para interromper.`;}
+const fTts=$('#setTts'),fAzKey=$('#setAzureKey'),fAzReg=$('#setAzureRegion'),fAzVoice=$('#setAzureVoice'),fElKey=$('#setElevenKey'),fElVoice=$('#setElevenVoice'),fElModel=$('#setElevenModel');
+function showTtsGroups(){$('#grpAzure').hidden=prefs.tts!=='azure';$('#grpEleven').hidden=prefs.tts!=='eleven';}
+const ttsChanged=()=>{cloudWarned=false;savePrefs();};
+fTts.addEventListener('change',()=>{prefs.tts=fTts.value;showTtsGroups();ttsChanged();});
+fAzKey.addEventListener('input',()=>{prefs.azureKey=fAzKey.value.trim();ttsChanged();});
+fAzReg.addEventListener('input',()=>{prefs.azureRegion=fAzReg.value.trim().toLowerCase().replace(/\s+/g,'');ttsChanged();});
+fAzVoice.addEventListener('change',()=>{prefs.azureVoice=fAzVoice.value;ttsChanged();});
+fElKey.addEventListener('input',()=>{prefs.elevenKey=fElKey.value.trim();ttsChanged();});
+fElVoice.addEventListener('input',()=>{prefs.elevenVoice=fElVoice.value.trim();ttsChanged();});
+fElModel.addEventListener('change',()=>{prefs.elevenModel=fElModel.value;ttsChanged();});
 function openSheet(){
+  fTts.value=prefs.tts;fAzKey.value=prefs.azureKey;fAzReg.value=prefs.azureRegion;fAzVoice.value=prefs.azureVoice;
+  fElKey.value=prefs.elevenKey;fElVoice.value=prefs.elevenVoice;fElModel.value=prefs.elevenModel;showTtsGroups();
   fKey.value=prefs.apiKey;fModel.value=prefs.model;fAi.value=prefs.aiName;fUser.value=prefs.userName;fGreet.value=prefs.greeting;
   fRate.value=prefs.rate;rateOut.textContent=fmtRate(prefs.rate);fFollow.checked=prefs.follow;fillVoiceSelect();sheet.hidden=false;
 }
@@ -491,7 +609,7 @@ fGreet.addEventListener('input',()=>{prefs.greeting=fGreet.value.trim()||DEFAULT
 fVoice.addEventListener('change',()=>{prefs.voiceURI=fVoice.value;savePrefs();});
 fRate.addEventListener('input',()=>{prefs.rate=Number(fRate.value)||1;rateOut.textContent=fmtRate(prefs.rate);savePrefs();});
 fFollow.addEventListener('change',()=>{prefs.follow=fFollow.checked;savePrefs();});
-$('#testVoice').addEventListener('click',()=>{if(!synth){showNotice('Este navegador não tem voz embutida.');return;}sayThen(prefs.greeting,()=>settle());});
+$('#testVoice').addEventListener('click',()=>{unlockAudio();cloudWarned=false;hideNotice();sayThen(prefs.greeting,()=>settle());});
 let armed=false,armT=null;
 clearBtn.addEventListener('click',()=>{
   if(!armed){armed=true;clearBtn.textContent='Toque de novo para apagar';armT=setTimeout(()=>{armed=false;clearBtn.textContent='Apagar conversa';},3000);return;}
